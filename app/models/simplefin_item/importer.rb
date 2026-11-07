@@ -379,11 +379,11 @@ class SimplefinItem::Importer
     end
 
     def import_with_chunked_history
-      # SimpleFin's actual limit is 60 days per request (not 365 as documented).
+      # SimpleFIN now rejects ranges over 45 days ("exceeds recommended range of 45 days"), so use 44.
       # SimpleFin typically only provides 60-90 days of history (bank-dependent).
       # Use adaptive chunking: start with 2 chunks, continue if new data found,
       # stop after 2 consecutive empty chunks. Max 6 chunks (360 days) for safety.
-      chunk_size_days = 60
+      chunk_size_days = 44  # SimpleFIN now rejects ranges over 45 days (upstream issue #4790)
       max_requests = 6  # Down from 22 - SimpleFIN rarely provides >90 days anyway
       current_end_date = Time.current
 
