@@ -1,0 +1,94 @@
+<%= content_for :page_title, t(".title") %>
+
+<% max_bar = @bars.flat_map { |b| [ b[:income].amount, b[:expense].amount ] }.max.to_f %>
+
+<div class="max-w-3xl w-full mx-auto space-y-4 pb-8">
+  <%= render "monthly/interval_tabs" %>
+
+  <%# Income vs. spending bars, one column per period; tap a column to select it. %>
+  <div class="bg-container rounded-xl shadow-border-xs p-4">
+    <div class="flex items-end justify-between gap-2 h-44">
+      <% @bars.each do |bar| %>
+        <% selected = bar[:period].start_date == @selected.start_date %>
+        <%= link_to monthly_path(interval: @interval, date: bar[:period].start_date),
+              class: class_names("flex-1 h-full flex flex-col items-center justify-end gap-1 rounded-lg pt-2 pb-1 border",
+                                 selected ? "border-primary bg-surface-inset" : "border-transparent hover:bg-surface-hover"),
+              title: "#{period_title(bar[:period])}: #{t('.income')} #{bar[:income].format}, #{t('.total_spend')} #{bar[:expense].format}" do %>
+          <div class="flex items-end justify-center gap-1 flex-1 w-full">
+            <% [ [ bar[:income], "bg-green-500" ], [ bar[:expense], "bg-indigo-400" ] ].each do |money, color| %>
+              <% pct = max_bar.zero? ? 0 : (money.amount.to_f / max_bar * 100) %>
+              <div class="w-3 sm:w-4 rounded-t <%= color %>" style="height: <%= pct.positive? ? [ pct, 2 ].max.round(1) : 0 %>%"></div>
+            <% end %>
+          </div>
+          <span class="text-xs <%= selected ? "font-semibold text-primary" : "text-secondary" %>"><%= period_label(bar[:period]) %></span>
+        <% end %>
+      <% end %>
+    </div>
+    <div class="flex justify-center gap-4 mt-3 text-xs text-secondary">
+      <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-green-500"></span><%= t(".income") %></span>
+      <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-indigo-400"></span><%= t(".total_spend") %></span>
+    </div>
+  </div>
+
+  <%= render "monthly/period_nav" %>
+
+  <%# Selected period: income, spending by category, net income. %>
+  <div class="bg-container rounded-xl shadow-border-xs divide-y divide-subdued overflow-hidden">
+    <%= link_to breakdown_path_for(kind: "income"), class: "flex items-center gap-3 p-4 hover:bg-surface-hover" do %>
+      <span class="w-9 h-9 rounded-full bg-green-500/10 text-success flex items-center justify-center shrink-0"><%= icon("trending-up", color: "current") %></span>
+      <span class="flex-1 font-medium text-primary"><%= t(".income") %></span>
+      <span class="font-semibold text-primary privacy-sensitive"><%= @income_money.format %></span>
+      <%= icon("chevron-right", size: "sm", class: "text-subdued") %>
+    <% end %>
+
+    <details class="group" open>
+      <summary class="flex items-center gap-3 p-4 cursor-pointer list-none hover:bg-surface-hover">
+        <span class="w-9 h-9 rounded-full bg-indigo-400/10 text-indigo-500 flex items-center justify-center shrink-0"><%= icon("wallet", color: "current") %></span>
+        <span class="flex-1 font-medium text-primary"><%= t(".total_spend") %></span>
+        <span class="font-semibold text-primary privacy-sensitive"><%= @expense_money.format %></span>
+        <span class="transition-transform group-open:rotate-180"><%= icon("chevron-down", size: "sm", class: "text-subdued") %></span>
+      </summary>
+
+      <div class="bg-surface-inset divide-y divide-subdued">
+        <% if @spending_categories.empty? %>
+          <p class="px-4 py-3 text-sm text-secondary"><%= t(".no_spending") %></p>
+        <% end %>
+        <% @spending_categories.each do |ct| %>
+          <%= link_to breakdown_path_for(kind: "expense", category: ct.category), class: "flex items-center gap-3 pl-6 pr-4 py-3 hover:bg-surface-inset-hover" do %>
+            <span class="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style="background-color: <%= ct.category.color %>1a; color: <%= ct.category.color %>">
+              <%= icon(ct.category.lucide_icon.presence || "shapes", size: "sm", color: "current") %>
+            </span>
+            <span class="flex-1 min-w-0">
+              <span class="block text-sm text-primary truncate"><%= ct.category.display_name %></span>
+              <span class="block h-1 mt-1 rounded-full bg-gray-200 overflow-hidden">
+                <span class="block h-full rounded-full" style="width: <%= ct.weight.round(1) %>%; background-color: <%= ct.category.color %>"></span>
+              </span>
+            </span>
+            <span class="text-sm font-medium text-primary privacy-sensitive"><%= Money.new(ct.total, ct.currency).format %></span>
+            <%= icon("chevron-right", size: "sm", class: "text-subdued") %>
+          <% end %>
+        <% end %>
+      </div>
+    </details>
+
+    <div class="flex items-center gap-3 p-4">
+      <span class="w-9 h-9 rounded-full bg-surface-inset text-secondary flex items-center justify-center shrink-0"><%= icon("equal", color: "current") %></span>
+      <span class="flex-1 font-medium text-primary"><%= t(".net_income") %></span>
+      <span class="font-semibold privacy-sensitive <%= @net_money.negative? ? "text-destructive" : "text-success" %>"><%= @net_money.format %></span>
+      <span class="w-4"></span>
+    </div>
+  </div>
+
+  <% if @income_categories.size > 1 %>
+    <div class="bg-container rounded-xl shadow-border-xs divide-y divide-subdued overflow-hidden">
+      <p class="px-4 pt-4 pb-2 text-xs font-medium uppercase tracking-wide text-secondary"><%= t(".income_sources") %></p>
+      <% @income_categories.each do |ct| %>
+        <%= link_to breakdown_path_for(kind: "income", category: ct.category), class: "flex items-center gap-3 px-4 py-3 hover:bg-surface-hover" do %>
+          <span class="flex-1 text-sm text-primary truncate"><%= ct.category.display_name %></span>
+          <span class="text-sm font-medium text-primary privacy-sensitive"><%= Money.new(ct.total, ct.currency).format %></span>
+          <%= icon("chevron-right", size: "sm", class: "text-subdued") %>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+</div>

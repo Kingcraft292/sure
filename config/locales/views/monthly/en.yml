@@ -1,0 +1,27 @@
+---
+en:
+  monthly:
+    intervals:
+      week: Week
+      month: Month
+      quarter: Quarter
+      year: Year
+    index:
+      title: Monthly
+      income: Income
+      total_spend: Total Spend
+      net_income: Net Income
+      income_sources: Income sources
+      no_spending: No spending in this period.
+      week_of: "Week of %{date}"
+      previous: Previous period
+      next: Next period
+    breakdown:
+      back: Back to Monthly
+      transactions: Transactions
+      total: Total
+      empty: No transactions in this period.
+      open_in_transactions: Open these in Transactions
+      sort:
+        newest: Newest
+        largest: Largest

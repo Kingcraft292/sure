@@ -461,6 +461,10 @@ Rails.application.routes.draw do
     delete :destroy_all, on: :collection
   end
 
+  # Monthly spending overview (homelab addition)
+  get "monthly", to: "monthly#index", as: :monthly
+  get "monthly/breakdown", to: "monthly#breakdown", as: :monthly_breakdown
+
   resources :reports, only: %i[index] do
     patch :update_preferences, on: :collection
     get :export_transactions, on: :collection

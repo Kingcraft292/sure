@@ -1,0 +1,15 @@
+<%# Week / Month / Quarter / Year switch. Switching jumps back to the current period. %>
+<div class="flex justify-center">
+  <div class="tab-bg-group inline-flex rounded-lg p-1 gap-1">
+    <% labels = { "week" => t("monthly.intervals.week"), "month" => t("monthly.intervals.month"),
+                  "quarter" => t("monthly.intervals.quarter"), "year" => t("monthly.intervals.year") } %>
+    <% MonthlyController::INTERVALS.each do |interval| %>
+      <%= link_to labels.fetch(interval),
+            url_for(params.permit(:kind, :category, :sort).merge(interval: interval, date: nil)),
+            class: class_names(
+              "px-3 py-1.5 rounded-md text-sm font-medium",
+              interval == @interval ? "tab-item-active text-primary shadow-sm" : "text-secondary hover:text-primary"
+            ) %>
+    <% end %>
+  </div>
+</div>

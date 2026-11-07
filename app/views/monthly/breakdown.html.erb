@@ -1,0 +1,89 @@
+<%= content_for :page_title, breakdown_title %>
+
+<% max_bar = @bars.map { |b| b[:total].amount }.max.to_f %>
+<% bar_color = @kind == "income" ? "bg-green-500" : "bg-indigo-400" %>
+<% transactions_filters = { types: [ @kind ], start_date: @selected.start_date.iso8601, end_date: @selected.end_date.iso8601 } %>
+<% transactions_filters[:categories] = [ @category.uncategorized? ? Category::UNCATEGORIZED_FILTER_VALUE : @category.name ] if @category %>
+
+<div class="max-w-3xl w-full mx-auto space-y-4 pb-8">
+  <div class="flex items-center gap-2">
+    <%= link_to monthly_path(interval: @interval, date: @selected.start_date), class: "p-2 -ml-2 rounded-lg text-secondary hover:bg-surface-hover", title: t(".back") do %>
+      <%= icon("arrow-left") %>
+    <% end %>
+    <h1 class="text-xl font-semibold text-primary flex-1 truncate"><%= breakdown_title %></h1>
+  </div>
+
+  <%= render "monthly/interval_tabs" %>
+
+  <%# One bar per period for this category; tap a bar to see that period's transactions. %>
+  <div class="bg-container rounded-xl shadow-border-xs p-4">
+    <div class="flex items-end justify-between gap-2 h-48">
+      <% @bars.each do |bar| %>
+        <% selected = bar[:period].start_date == @selected.start_date %>
+        <% pct = max_bar.zero? ? 0 : (bar[:total].amount.to_f / max_bar * 100) %>
+        <%= link_to breakdown_path_for(kind: @kind, category: @category, date: bar[:period].start_date),
+              class: class_names("flex-1 h-full flex flex-col items-center justify-end gap-1 rounded-lg pt-1 pb-1 border",
+                                 selected ? "border-primary bg-surface-inset" : "border-transparent hover:bg-surface-hover") do %>
+          <span class="text-[11px] sm:text-xs font-medium text-secondary privacy-sensitive whitespace-nowrap"><%= bar[:total].format(precision: 0) %></span>
+          <div class="flex items-end justify-center flex-1 w-full">
+            <div class="w-6 sm:w-10 rounded-t <%= bar_color %>" style="height: <%= pct.positive? ? [ pct, 2 ].max.round(1) : 0 %>%"></div>
+          </div>
+          <span class="text-xs <%= selected ? "font-semibold text-primary" : "text-secondary" %>"><%= period_label(bar[:period]) %></span>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+
+  <%= render "monthly/period_nav" %>
+
+  <%# The selected period's transactions. %>
+  <div class="bg-container rounded-xl shadow-border-xs overflow-hidden">
+    <div class="flex items-center justify-between px-4 py-3">
+      <p class="text-xs font-medium uppercase tracking-wide text-secondary"><%= t(".transactions") %></p>
+      <div class="tab-bg-group inline-flex rounded-lg p-0.5 gap-0.5">
+        <% { "newest" => t(".sort.newest"), "largest" => t(".sort.largest") }.each do |sort, label| %>
+          <%= link_to label,
+                breakdown_path_for(kind: @kind, category: @category, sort: sort),
+                class: class_names("px-2.5 py-1 rounded-md text-xs font-medium",
+                                   sort == @sort ? "tab-item-active text-primary shadow-sm" : "text-secondary hover:text-primary") %>
+        <% end %>
+      </div>
+    </div>
+
+    <div class="divide-y divide-subdued border-t border-divider">
+      <% if @transactions.empty? %>
+        <p class="px-4 py-6 text-sm text-secondary text-center"><%= t(".empty") %></p>
+      <% end %>
+      <% @transactions.each do |transaction| %>
+        <% entry = transaction.entry %>
+        <%= link_to entry_path(entry), data: { turbo_frame: "drawer", turbo_prefetch: false }, class: "flex items-center gap-3 px-4 py-3 hover:bg-surface-hover" do %>
+          <% avatar_color = transaction.category&.color || "#737373" %>
+          <span class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-sm font-medium" style="background-color: <%= avatar_color %>1a; color: <%= avatar_color %>">
+            <% if transaction.category&.lucide_icon.present? %>
+              <%= icon(transaction.category.lucide_icon, size: "sm", color: "current") %>
+            <% else %>
+              <%= (transaction.merchant&.name || entry.name).to_s.strip.first&.upcase %>
+            <% end %>
+          </span>
+          <span class="flex-1 min-w-0">
+            <span class="block text-sm font-medium text-primary truncate"><%= transaction.merchant&.name.presence || entry.name %></span>
+            <span class="block text-xs text-secondary truncate"><%= entry.date.strftime(entry.date.year == Date.current.year ? "%B %-d" : "%B %-d, %Y") %> · <%= entry.account.name %></span>
+          </span>
+          <% shown = -entry.amount_money %>
+          <span class="text-sm font-medium privacy-sensitive whitespace-nowrap <%= shown.positive? ? "text-success" : "text-primary" %>">
+            <%= shown.positive? ? "+#{shown.format}" : shown.abs.format %>
+          </span>
+        <% end %>
+      <% end %>
+    </div>
+
+    <div class="flex items-center justify-between px-4 py-3 border-t border-divider">
+      <span class="text-sm text-secondary"><%= t(".total") %></span>
+      <span class="text-base font-semibold text-primary privacy-sensitive"><%= @selected_total.format %></span>
+    </div>
+  </div>
+
+  <div class="text-center">
+    <%= link_to t(".open_in_transactions"), transactions_path(q: transactions_filters), class: "text-sm text-secondary hover:text-primary underline underline-offset-2" %>
+  </div>
+</div>

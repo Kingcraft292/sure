@@ -1,0 +1,18 @@
+<%# Selected period heading with previous / next arrows. %>
+<div class="flex items-center justify-between">
+  <%= link_to url_for(params.permit(:kind, :category, :sort).merge(interval: @interval, date: @previous_start)),
+        class: "p-2 rounded-lg text-secondary hover:bg-surface-hover", title: t("monthly.index.previous") do %>
+    <%= icon("chevron-left") %>
+  <% end %>
+
+  <h2 class="text-lg font-semibold text-primary"><%= period_title(@selected) %></h2>
+
+  <% if @next_start %>
+    <%= link_to url_for(params.permit(:kind, :category, :sort).merge(interval: @interval, date: @next_start)),
+          class: "p-2 rounded-lg text-secondary hover:bg-surface-hover", title: t("monthly.index.next") do %>
+      <%= icon("chevron-right") %>
+    <% end %>
+  <% else %>
+    <span class="p-2 text-subdued opacity-40"><%= icon("chevron-right") %></span>
+  <% end %>
+</div>
